@@ -1,0 +1,181 @@
+# ██╗    ██╗██╗██████╗  ██████╗ ███████╗████████╗███████╗
+# ██║    ██║██║██╔══██╗██╔════╝ ██╔════╝╚══██╔══╝██╔════╝
+# ██║ █╗ ██║██║██║  ██║██║  ███╗█████╗     ██║   ███████╗
+# ██║███╗██║██║██║  ██║██║   ██║██╔══╝     ██║   ╚════██║
+# ╚███╔███╔╝██║██████╔╝╚██████╔╝███████╗   ██║   ███████║
+#  ╚══╝╚══╝ ╚═╝╚═════╝  ╚═════╝ ╚══════╝   ╚═╝   ╚══════╝
+
+# https://github.com/L4ZYP4CM4N/DOTFILES
+
+
+from libqtile import widget
+from .theme import colors
+from libqtile.lazy import lazy
+from qtile_extras import widget
+from .spotify import Spotify
+
+# Quick settings #
+font = "JetBrainsMono Nerd Font Mono"
+power_line_size = 24
+font_size = 13
+icon_size = 20
+workspace_icon_size = 24
+
+
+class MyVolume(widget.Volume):
+    def _configure(self, qtile, bar):
+        widget.Volume._configure(self, qtile, bar)
+        self.volume = self.get_volume()
+        if self.volume <= 0:
+            self.text = "󰆪"
+        elif self.volume <= 15:
+            self.text = ""
+        elif self.volume < 50:
+            self.text = ""
+        else:
+            self.text = ""
+        # drawing here crashes Wayland
+
+    def _update_drawer(self, wob=False):
+        if self.volume <= 0:
+            self.text = "󰆪"
+        elif self.volume <= 15:
+            self.text = ""
+        elif self.volume < 50:
+            self.text = ""
+        else:
+            self.text = ""
+        self.draw()
+
+        if wob:
+            with open(self.wob, "a") as f:
+                f.write(str(self.volume) + "\n")
+
+
+def base(fg="Surface0", bg="Base"):
+    return {"foreground": colors[fg], "background": colors[bg]}
+
+
+def separator():
+    return widget.Sep(**base(), linewidth=0, padding=5)
+
+
+def powerline_left(fg="Flamingo", bg="Base"):
+    return widget.TextBox(
+        **base(fg, bg), text=" ", fontsize=power_line_size, padding=-3  #   
+    )
+
+
+def powerline_right(fg="Flamingo", bg="Base"):
+    return widget.TextBox(
+        **base(fg, bg), text=" ", fontsize=power_line_size, padding=-3  #   
+    )
+
+
+def icon(fg="Surface0", bg="Base", fontsize=icon_size, text="?"):
+    return widget.TextBox(
+        **base(fg, bg),
+        fontsize=fontsize,
+        text=text,
+        padding=1,
+    )
+
+
+def workspaces():
+    return [
+        separator(),
+        widget.Image(
+            **base("Base", "Base"),
+            filename="~/.config/qtile/assets/eos-c.png",
+            scale=True,
+            margin=7,
+            mouse_callbacks={
+                "Button1": lambda: qtile.cmd_spawn("rofi -show drun"),
+                "Button3": lazy.spawn("sh .config/qtile/scripts/rofi/powermenu.sh"),
+            },
+        ),
+        separator(),
+        widget.GroupBox(
+            **base(fg="Base"),
+            font=font,
+            fontsize=workspace_icon_size,
+            margin_y=3,
+            margin_x=0,
+            padding_y=8,
+            padding_x=5,
+            borderwidth=1,
+            # active=colors["Sapphire"],
+            # inactive=colors["Flamingo"],
+            rounded=False,
+            highlight_method="block",  # box, text, block, line
+            # block_highlight_text_color="Flamingo",
+            # urgent_alert_method="line",
+            # urgent_border=colors["Yellow"],
+            # this_current_screen_border=colors["Flamingo"],
+            # this_screen_border=colors["Base"],
+            # other_current_screen_border=colors["Sapphire"],
+            # other_screen_border=colors["Base"],
+            disable_drag=True,
+            hide_unused=True,
+            center_aligned=True,
+        ),
+    ]
+
+
+volume = MyVolume(
+    **base(fg="Sky"),
+    fontsize=22,
+    font=font,
+    mouse_callbacks={"Button1": lazy.spawn("pavucontrol")},
+)
+
+primary_widgets = [
+    *workspaces(),
+    powerline_right("Base", "Crust"),
+    widget.CurrentLayout(**base(fg="Flamingo", bg="Crust"), scale=0.65),
+    powerline_right("Crust", "Base"),
+    widget.WindowName(**base(fg="Sky"), padding=5),
+    # Spotify(),
+    widget.Systray(background=colors["Base"], padding=5),
+    separator(),
+    volume,
+    powerline_left("Rosewater", "Base"),
+    icon(bg="Rosewater", text="󰅢"),  # Icon: nf-fa-download
+    widget.CheckUpdates(
+        **base(bg="Rosewater"),
+        colour_have_updates=colors["Red"],
+        colour_no_updates=colors["Red"],
+        no_update_string=" 0",
+        display_format=" {updates}",
+        update_interval=1800,
+        custom_command="checkupdates",
+        mouse_callbacks={"Button1": lazy.spawn("kitty -e sudo pacman -Syu")},
+    ),
+    powerline_left("Peach", "Rosewater"),
+    icon(bg="Peach", text=""),
+    widget.Memory(
+        **base(bg="Peach"),
+        measure_mem="G",
+        format="{MemUsed: .0f}{mm} ",  # /{MemTotal: .0f}{mm}
+        mouse_callbacks={"Button1": lazy.spawn("kitty -e gotop")},
+    ),
+    icon(bg="Peach", text=" "),
+    widget.ThermalSensor(
+        **base(bg="Peach"),
+        tag_sensor="edge",
+        threshold=70,
+        mouse_callbacks={"Button1": lazy.spawn("kitty -e gotop")},
+    ),
+    powerline_left("Sapphire", "Peach"),
+    icon(bg="Sapphire", text=""),
+    widget.Clock(
+        **base(bg="Sapphire"),
+        format="%H:%M %d/%m ",
+    ),
+]
+
+widget_defaults = {
+    "font": font,
+    "fontsize": font_size,
+}
+extension_defaults = widget_defaults.copy()
